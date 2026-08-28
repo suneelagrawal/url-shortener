@@ -5,6 +5,7 @@ import com.platform.urlshortener.entity.ShortenedUrl;
 import com.platform.urlshortener.repository.ShortenedUrlRepository;
 import com.platform.urlshortener.util.ShortCodeGenerator;
 import org.springframework.stereotype.Service;
+import com.platform.urlshortener.exception.ShortUrlNotFoundException;
 
 import java.time.Instant;
 
@@ -60,4 +61,10 @@ public class UrlShortenerService {
                 "Unable to generate unique short code"
         );
     }
+    public String getOriginalUrl(String shortCode) {
+        return repository.findByShortCode(shortCode)
+                .map(ShortenedUrl::getOriginalUrl)
+                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode)
+                );
+    }    
 }
