@@ -1,0 +1,131 @@
+# URL Shortener
+
+## Overview
+
+Spring Boot based URL shortener service.
+
+## Tech Stack
+
+* Java 25
+* Spring Boot 4.1.1
+* Maven
+* Spring Web
+* Spring Data JPA
+* H2 in-memory database
+* Spring Boot Actuator
+
+## Architecture
+
+```text
+https://github.com/spring-projects/spring-boot/blob/main/README.adoc
+                              |
+                              v
+                  +-------------------------+
+                  | URL Shortening Service  |
+                  +-------------------------+
+                              |
+                              v
+                   http://localhost:8080/aB12Cd
+
+
+                   http://localhost:8080/aB12Cd
+                              |
+                              v
+                  +-------------------------+
+                  | URL Shortening Service  |
+                  +-------------------------+
+                              |
+                              v
+                       HTTP 302 Redirect
+                              |
+                              v
+https://github.com/spring-projects/spring-boot/blob/main/README.adoc
+```
+
+## Package Structure
+
+```text
+com.platform.urlshortener
+├── controller
+├── dto
+├── entity
+├── exception
+├── repository
+├── service
+└── util
+```
+
+## AI Review and Engineering Decisions
+
+* **PostgreSQL → H2**
+
+  * **Why:** Simpler setup with no external database dependency.
+  * **Trade-off:** Data is lost on restart. PostgreSQL would be preferred for production.
+
+* **Additional decisions**
+
+  * Add more reviewed changes here as implementation progresses.
+
+## Planned Implementation
+
+### Greenfield Development
+
+Build the initial URL shortener from scratch.
+
+1. Implement short URL generation
+2. Implement short URL redirect
+3. Add validation and error handling
+4. Add unit and integration tests
+5. Add basic click analytics
+
+### Brownfield Development
+
+Enhance the existing working application.
+
+1. Add URL expiration
+2. Identify impacted entity, DTO, service, redirect behavior, and tests
+3. Validate backward compatibility
+4. Add tests for active, expired, and unknown URLs
+
+### Ambiguous Requirement
+
+Requirement:
+
+> Users should be able to customize their shortened URL.
+
+Before implementation, define assumptions for:
+
+* Allowed characters
+* Alias length
+* Case sensitivity
+* Duplicate aliases
+* Reserved aliases
+* Expiration behavior
+
+Then implement and test the agreed behavior.
+
+### Finalization
+
+1. Add Docker and Docker Compose
+2. Complete end-to-end validation
+3. Finalize README with testing, limitations, and trade-offs
+
+## Run Locally
+
+Build:
+
+```bash
+mvn clean test
+```
+
+Start:
+
+```bash
+mvn spring-boot:run
+```
+
+Verify:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
