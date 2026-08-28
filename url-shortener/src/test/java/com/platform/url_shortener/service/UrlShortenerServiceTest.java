@@ -1,0 +1,41 @@
+package com.platform.urlshortener.service;
+
+import com.platform.urlshortener.dto.CreateUrlResponse;
+import com.platform.urlshortener.entity.ShortenedUrl;
+import com.platform.urlshortener.repository.ShortenedUrlRepository;
+import com.platform.urlshortener.util.ShortCodeGenerator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+class UrlShortenerServiceTest {
+
+    private ShortenedUrlRepository repository;
+    private ShortCodeGenerator generator;
+    private UrlShortenerService service;
+
+    @BeforeEach
+    void setUp() {
+        repository = mock(ShortenedUrlRepository.class);
+        generator = mock(ShortCodeGenerator.class);
+        service = new UrlShortenerService(repository, generator);
+    }
+
+    @Test
+    void shouldCreateShortUrl() {
+        when(generator.generate()).thenReturn("aB12Cd");
+        when(repository.existsByShortCode("aB12Cd")).thenReturn(false);
+
+        CreateUrlResponse response =
+                service.createShortUrl("https://github.com");
+
+        assertEquals("aB12Cd", response.shortCode());
+        assertEquals("http://localhost:8080/aB12Cd", response.shortUrl());
+        assertEquals("https://github.com", response.originalUrl());
+
+        verify(repository).save(any(ShortenedUrl.class));
+    }
+}
