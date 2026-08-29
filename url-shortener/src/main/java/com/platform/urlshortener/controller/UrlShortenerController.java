@@ -28,7 +28,7 @@ public class UrlShortenerController {
         ) {
 
                 CreateUrlResponse response =
-                        urlShortenerService.createShortUrl(request.url());
+                        urlShortenerService.createShortUrl(request.url(),request.expiresAt());
 
                 return ResponseEntity
                         .status(HttpStatus.CREATED)

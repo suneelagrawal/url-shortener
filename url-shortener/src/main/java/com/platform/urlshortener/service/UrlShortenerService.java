@@ -5,6 +5,8 @@ import com.platform.urlshortener.entity.ShortenedUrl;
 import com.platform.urlshortener.repository.ShortenedUrlRepository;
 import com.platform.urlshortener.util.ShortCodeGenerator;
 
+import com.platform.urlshortener.exception.ShortUrlExpiredException;
+
 import com.platform.urlshortener.dto.UrlAnalyticsResponse;
 
 import org.springframework.stereotype.Service;
@@ -28,14 +30,15 @@ public class UrlShortenerService {
         this.shortCodeGenerator = shortCodeGenerator;
     }
 
-    public CreateUrlResponse createShortUrl(String originalUrl) {
+    public CreateUrlResponse createShortUrl(String originalUrl,  Instant expiresAt) {
 
         String shortCode = generateUniqueShortCode();
 
         ShortenedUrl shortenedUrl = new ShortenedUrl(
                 shortCode,
                 originalUrl,
-                Instant.now()
+                Instant.now(),
+                expiresAt
         );
 
         repository.save(shortenedUrl);
@@ -70,6 +73,10 @@ public class UrlShortenerService {
                 .orElseThrow(() ->
                         new ShortUrlNotFoundException(shortCode)
                 );
+
+        if (shortenedUrl.isExpired()) {
+                throw new ShortUrlExpiredException(shortCode);
+        }                
 
         shortenedUrl.recordAccess();
         repository.save(shortenedUrl);

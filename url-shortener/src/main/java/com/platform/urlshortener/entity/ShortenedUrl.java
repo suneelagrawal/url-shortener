@@ -47,17 +47,23 @@ public class ShortenedUrl {
     @Column(name = "last_accessed_at")
     private Instant lastAccessedAt;
 
+    // null expiresAt means no expiration
+    @Column(name = "expires_at")
+    private Instant expiresAt;    
+
     protected ShortenedUrl() {
     }
 
     public ShortenedUrl(
             String shortCode,
             String originalUrl,
-            Instant createdAt
+            Instant createdAt,
+            Instant expiresAt
     ) {
         this.shortCode = shortCode;
         this.originalUrl = originalUrl;
         this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
     }
 
     public Long getId() {
@@ -88,4 +94,13 @@ public class ShortenedUrl {
         this.clickCount++;
         this.lastAccessedAt = Instant.now();
     }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public boolean isExpired() {
+        return expiresAt != null
+                && Instant.now().isAfter(expiresAt);
+    }    
 }

@@ -6,6 +6,10 @@ import com.platform.urlshortener.entity.ShortenedUrl;
 import com.platform.urlshortener.exception.ShortUrlNotFoundException;
 import com.platform.urlshortener.repository.ShortenedUrlRepository;
 import com.platform.urlshortener.util.ShortCodeGenerator;
+
+import com.platform.urlshortener.exception.ShortUrlExpiredException;
+import com.platform.urlshortener.service.UrlShortenerService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,161 +22,183 @@ import static org.mockito.Mockito.*;
 
 class UrlShortenerServiceTest {
 
-    private ShortenedUrlRepository repository;
-    private ShortCodeGenerator generator;
-    private UrlShortenerService service;
+        private ShortenedUrlRepository repository;
+        private ShortCodeGenerator generator;
+        private UrlShortenerService service;
 
-    @BeforeEach
-    void setUp() {
-        repository = mock(ShortenedUrlRepository.class);
-        generator = mock(ShortCodeGenerator.class);
+        @BeforeEach
+        void setUp() {
+                repository = mock(ShortenedUrlRepository.class);
+                generator = mock(ShortCodeGenerator.class);
 
-        service = new UrlShortenerService(
-                repository,
-                generator
-        );
-    }
+                service = new UrlShortenerService(
+                                repository,
+                                generator);
+        }
 
-    @Test
-    void shouldCreateShortUrl() {
+        @Test
+        void shouldCreateShortUrl() {
 
-        when(generator.generate())
-                .thenReturn("aB12Cd");
+                when(generator.generate())
+                                .thenReturn("aB12Cd");
 
-        when(repository.existsByShortCode("aB12Cd"))
-                .thenReturn(false);
+                when(repository.existsByShortCode("aB12Cd"))
+                                .thenReturn(false);
 
-        CreateUrlResponse response =
-                service.createShortUrl("https://github.com");
+                CreateUrlResponse response = service.createShortUrl("https://github.com", null);
 
-        assertEquals("aB12Cd", response.shortCode());
+                assertEquals("aB12Cd", response.shortCode());
 
-        assertEquals(
-                "http://localhost:8080/aB12Cd",
-                response.shortUrl()
-        );
+                assertEquals(
+                                "http://localhost:8080/aB12Cd",
+                                response.shortUrl());
 
-        assertEquals(
-                "https://github.com",
-                response.originalUrl()
-        );
+                assertEquals(
+                                "https://github.com",
+                                response.originalUrl());
 
-        verify(repository).save(any(ShortenedUrl.class));
-    }
+                verify(repository).save(any(ShortenedUrl.class));
+        }
 
-    @Test
-    void shouldRetryWhenShortCodeAlreadyExists() {
+        @Test
+        void shouldRetryWhenShortCodeAlreadyExists() {
 
-        when(generator.generate())
-                .thenReturn("ABC123")
-                .thenReturn("XYZ789");
+                when(generator.generate())
+                                .thenReturn("ABC123")
+                                .thenReturn("XYZ789");
 
-        when(repository.existsByShortCode("ABC123"))
-                .thenReturn(true);
+                when(repository.existsByShortCode("ABC123"))
+                                .thenReturn(true);
 
-        when(repository.existsByShortCode("XYZ789"))
-                .thenReturn(false);
+                when(repository.existsByShortCode("XYZ789"))
+                                .thenReturn(false);
 
-        CreateUrlResponse response =
-                service.createShortUrl("https://github.com");
+                CreateUrlResponse response = service.createShortUrl("https://github.com", null);
 
-        assertEquals("XYZ789", response.shortCode());
+                assertEquals("XYZ789", response.shortCode());
 
-        verify(generator, times(2)).generate();
-    }
+                verify(generator, times(2)).generate();
+        }
 
-    @Test
-    void shouldReturnOriginalUrl() {
+        @Test
+        void shouldReturnOriginalUrl() {
 
-        ShortenedUrl shortenedUrl =
-                new ShortenedUrl(
-                        "aB12Cd",
-                        "https://github.com",
-                        Instant.now()
-                );
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                "aB12Cd",
+                                "https://github.com",
+                                Instant.now(),
+                                null);
 
-        when(repository.findByShortCode("aB12Cd"))
-                .thenReturn(Optional.of(shortenedUrl));
+                when(repository.findByShortCode("aB12Cd"))
+                                .thenReturn(Optional.of(shortenedUrl));
 
-        String originalUrl =
+                String originalUrl = service.getOriginalUrl("aB12Cd");
+
+                assertEquals(
+                                "https://github.com",
+                                originalUrl);
+        }
+
+        @Test
+        void shouldThrowExceptionWhenShortCodeDoesNotExist() {
+
+                when(repository.findByShortCode("invalid"))
+                                .thenReturn(Optional.empty());
+
+                assertThrows(
+                                ShortUrlNotFoundException.class,
+                                () -> service.getOriginalUrl("invalid"));
+        }
+
+        @Test
+        void shouldIncrementClickCountDuringRedirect() {
+
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                "aB12Cd",
+                                "https://github.com",
+                                Instant.now(),
+                                null);
+
+                when(repository.findByShortCode("aB12Cd"))
+                                .thenReturn(Optional.of(shortenedUrl));
+
                 service.getOriginalUrl("aB12Cd");
 
-        assertEquals(
-                "https://github.com",
-                originalUrl
-        );
-    }
+                assertEquals(
+                                1,
+                                shortenedUrl.getClickCount());
 
-    @Test
-    void shouldThrowExceptionWhenShortCodeDoesNotExist() {
+                assertNotNull(
+                                shortenedUrl.getLastAccessedAt());
 
-        when(repository.findByShortCode("invalid"))
-                .thenReturn(Optional.empty());
+                verify(repository).save(shortenedUrl);
+        }
 
-        assertThrows(
-                ShortUrlNotFoundException.class,
-                () -> service.getOriginalUrl("invalid")
-        );
-    }
+        @Test
+        void shouldReturnAnalytics() {
 
-    @Test
-    void shouldIncrementClickCountDuringRedirect() {
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                "aB12Cd",
+                                "https://github.com",
+                                Instant.now(),
+                                null);
 
-        ShortenedUrl shortenedUrl =
-                new ShortenedUrl(
-                        "aB12Cd",
-                        "https://github.com",
-                        Instant.now()
-                );
+                shortenedUrl.recordAccess();
+                shortenedUrl.recordAccess();
 
-        when(repository.findByShortCode("aB12Cd"))
-                .thenReturn(Optional.of(shortenedUrl));
+                when(repository.findByShortCode("aB12Cd"))
+                                .thenReturn(Optional.of(shortenedUrl));
 
-        service.getOriginalUrl("aB12Cd");
+                UrlAnalyticsResponse response = service.getAnalytics("aB12Cd");
 
-        assertEquals(
-                1,
-                shortenedUrl.getClickCount()
-        );
+                assertEquals(
+                                "aB12Cd",
+                                response.shortCode());
 
-        assertNotNull(
-                shortenedUrl.getLastAccessedAt()
-        );
+                assertEquals(
+                                2,
+                                response.clickCount());
 
-        verify(repository).save(shortenedUrl);
-    }
+                assertNotNull(
+                                response.lastAccessedAt());
+        }
 
-    @Test
-    void shouldReturnAnalytics() {
+        @Test
+        void shouldRedirectWhenUrlHasNotExpired() {
 
-        ShortenedUrl shortenedUrl =
-                new ShortenedUrl(
-                        "aB12Cd",
-                        "https://github.com",
-                        Instant.now()
-                );
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                "aB12Cd",
+                                "https://github.com",
+                                Instant.now(),
+                                Instant.now().plusSeconds(3600));
 
-        shortenedUrl.recordAccess();
-        shortenedUrl.recordAccess();
+                when(repository.findByShortCode("aB12Cd"))
+                                .thenReturn(Optional.of(shortenedUrl));
 
-        when(repository.findByShortCode("aB12Cd"))
-                .thenReturn(Optional.of(shortenedUrl));
+                String originalUrl = service.getOriginalUrl("aB12Cd");
 
-        UrlAnalyticsResponse response =
-                service.getAnalytics("aB12Cd");
+                assertEquals(
+                                "https://github.com",
+                                originalUrl);
+        }
 
-        assertEquals(
-                "aB12Cd",
-                response.shortCode()
-        );
+        @Test
+        void shouldThrowExceptionWhenUrlHasExpired() {
 
-        assertEquals(
-                2,
-                response.clickCount()
-        );
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                "aB12Cd",
+                                "https://github.com",
+                                Instant.now().minusSeconds(7200),
+                                Instant.now().minusSeconds(3600));
 
-        assertNotNull(
-                response.lastAccessedAt()
-        );
-    }
+                when(repository.findByShortCode("aB12Cd"))
+                                .thenReturn(Optional.of(shortenedUrl));
+
+                assertThrows(
+                                ShortUrlExpiredException.class,
+                                () -> service.getOriginalUrl("aB12Cd"));
+
+                verify(repository, never()).save(shortenedUrl);
+        }
+
 }

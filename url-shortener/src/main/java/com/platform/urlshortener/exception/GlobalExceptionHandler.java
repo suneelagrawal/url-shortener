@@ -1,5 +1,6 @@
 package com.platform.urlshortener.exception;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,6 +28,30 @@ public class GlobalExceptionHandler {
                 .body(Map.of(
                         "error", "BAD_REQUEST",
                         "message", message
+                ));
+    }
+
+    @ExceptionHandler(ShortUrlNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleShortUrlNotFound(
+            ShortUrlNotFoundException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "error", "NOT_FOUND",
+                        "message", exception.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(ShortUrlExpiredException.class)
+    public ResponseEntity<Map<String, String>> handleShortUrlExpired(
+            ShortUrlExpiredException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.GONE)
+                .body(Map.of(
+                        "error", "GONE",
+                        "message", exception.getMessage()
                 ));
     }
 }
