@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.platform.urlshortener.exception.DuplicateAliasException;
+
 import java.util.Map;
 
 @RestControllerAdvice
@@ -54,4 +56,16 @@ public class GlobalExceptionHandler {
                         "message", exception.getMessage()
                 ));
     }
+
+    @ExceptionHandler(DuplicateAliasException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateAlias(
+            DuplicateAliasException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "error", "CONFLICT",
+                        "message", exception.getMessage()
+                ));
+    }    
 }

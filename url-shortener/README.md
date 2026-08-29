@@ -102,7 +102,7 @@ Assumptions:
 * Custom alias is optional
 * Alias must be exactly 6 characters
 * Allowed characters: letters and numbers only
-* Aliases are case-insensitive
+* Aliases are case-sensitive
 * Duplicate alias returns `409 Conflict`
 * Authentication and ownership are out of scope
 * Custom aliases follow the same expiration behavior as generated URLs

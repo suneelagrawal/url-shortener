@@ -13,7 +13,12 @@ public record CreateUrlRequest(
                 message = "URL must start with http:// or https://"
         )
         String url,
-        Instant expiresAt
+        Instant expiresAt,
+        @Pattern(
+                regexp = "^[A-Za-z0-9]{6}$",
+                message = "Custom alias must be exactly 6 alphanumeric characters"
+        )
+        String customAlias        
 
 ) {
 }

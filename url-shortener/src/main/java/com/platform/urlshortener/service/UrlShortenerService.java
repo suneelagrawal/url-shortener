@@ -4,7 +4,7 @@ import com.platform.urlshortener.dto.CreateUrlResponse;
 import com.platform.urlshortener.entity.ShortenedUrl;
 import com.platform.urlshortener.repository.ShortenedUrlRepository;
 import com.platform.urlshortener.util.ShortCodeGenerator;
-
+import com.platform.urlshortener.exception.DuplicateAliasException;
 import com.platform.urlshortener.exception.ShortUrlExpiredException;
 
 import com.platform.urlshortener.dto.UrlAnalyticsResponse;
@@ -17,84 +17,95 @@ import java.time.Instant;
 @Service
 public class UrlShortenerService {
 
-    private static final int MAX_GENERATION_ATTEMPTS = 5;
+        private static final int MAX_GENERATION_ATTEMPTS = 5;
 
-    private final ShortenedUrlRepository repository;
-    private final ShortCodeGenerator shortCodeGenerator;
+        private final ShortenedUrlRepository repository;
+        private final ShortCodeGenerator shortCodeGenerator;
 
-    public UrlShortenerService(
-            ShortenedUrlRepository repository,
-            ShortCodeGenerator shortCodeGenerator
-    ) {
-        this.repository = repository;
-        this.shortCodeGenerator = shortCodeGenerator;
-    }
-
-    public CreateUrlResponse createShortUrl(String originalUrl,  Instant expiresAt) {
-
-        String shortCode = generateUniqueShortCode();
-
-        ShortenedUrl shortenedUrl = new ShortenedUrl(
-                shortCode,
-                originalUrl,
-                Instant.now(),
-                expiresAt
-        );
-
-        repository.save(shortenedUrl);
-
-        String shortUrl = "http://localhost:8080/" + shortCode;
-
-        return new CreateUrlResponse(
-                shortCode,
-                shortUrl,
-                originalUrl
-        );
-    }
-
-    private String generateUniqueShortCode() {
-
-        for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-
-            String shortCode = shortCodeGenerator.generate();
-
-            if (!repository.existsByShortCode(shortCode)) {
-                return shortCode;
-            }
+        public UrlShortenerService(
+                        ShortenedUrlRepository repository,
+                        ShortCodeGenerator shortCodeGenerator) {
+                this.repository = repository;
+                this.shortCodeGenerator = shortCodeGenerator;
         }
 
-        throw new IllegalStateException(
-                "Unable to generate unique short code"
-        );
-    }
-    public String getOriginalUrl(String shortCode) {
+        public CreateUrlResponse createShortUrl(
+                        String originalUrl,
+                        Instant expiresAt,
+                        String customAlias) {
 
-        ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
-                .orElseThrow(() ->
-                        new ShortUrlNotFoundException(shortCode)
-                );
+                String shortCode;
 
-        if (shortenedUrl.isExpired()) {
-                throw new ShortUrlExpiredException(shortCode);
-        }                
+                if (customAlias != null && !customAlias.isBlank()) {
+                        shortCode = resolveCustomAlias(customAlias);
+                } else {
+                        shortCode = generateUniqueShortCode();
+                }
 
-        shortenedUrl.recordAccess();
-        repository.save(shortenedUrl);
+                ShortenedUrl shortenedUrl = new ShortenedUrl(
+                                shortCode,
+                                originalUrl,
+                                Instant.now(),
+                                expiresAt);
 
-        return shortenedUrl.getOriginalUrl();
-    }
-    public UrlAnalyticsResponse getAnalytics(String shortCode) {
+                repository.save(shortenedUrl);
 
-        ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
-                .orElseThrow(() ->
-                        new ShortUrlNotFoundException(shortCode)
-                );
+                String shortUrl = "http://localhost:8080/" + shortCode;
 
-        return new UrlAnalyticsResponse(
-                shortenedUrl.getShortCode(),
-                shortenedUrl.getClickCount(),
-                shortenedUrl.getCreatedAt(),
-                shortenedUrl.getLastAccessedAt()
-        );
-    }    
+                return new CreateUrlResponse(
+                                shortCode,
+                                shortUrl,
+                                originalUrl);
+        }
+
+        private String generateUniqueShortCode() {
+
+                for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+
+                        String shortCode = shortCodeGenerator.generate();
+
+                        if (!repository.existsByShortCode(shortCode)) {
+                                return shortCode;
+                        }
+                }
+
+                throw new IllegalStateException(
+                                "Unable to generate unique short code");
+        }
+
+        public String getOriginalUrl(String shortCode) {
+
+                ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
+                                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
+
+                if (shortenedUrl.isExpired()) {
+                        throw new ShortUrlExpiredException(shortCode);
+                }
+
+                shortenedUrl.recordAccess();
+                repository.save(shortenedUrl);
+
+                return shortenedUrl.getOriginalUrl();
+        }
+
+        private String resolveCustomAlias(String customAlias) {
+
+                if (repository.existsByShortCode(customAlias)) {
+                        throw new DuplicateAliasException(customAlias);
+                }
+
+                return customAlias;
+        }
+
+        public UrlAnalyticsResponse getAnalytics(String shortCode) {
+
+                ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
+                                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
+
+                return new UrlAnalyticsResponse(
+                                shortenedUrl.getShortCode(),
+                                shortenedUrl.getClickCount(),
+                                shortenedUrl.getCreatedAt(),
+                                shortenedUrl.getLastAccessedAt());
+        }
 }
