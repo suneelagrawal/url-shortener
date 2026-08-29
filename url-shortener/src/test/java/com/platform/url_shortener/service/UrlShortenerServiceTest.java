@@ -201,4 +201,24 @@ class UrlShortenerServiceTest {
                 verify(repository, never()).save(shortenedUrl);
         }
 
+        @Test
+        void shouldRedirectWhenExpirationIsNotSpecified() {
+
+        ShortenedUrl shortenedUrl =
+                new ShortenedUrl(
+                        "aB12Cd",
+                        "https://github.com",
+                        Instant.now(),
+                        null
+                );
+
+        when(repository.findByShortCode("aB12Cd"))
+                .thenReturn(Optional.of(shortenedUrl));
+
+        String originalUrl =
+                service.getOriginalUrl("aB12Cd");
+
+        assertEquals("https://github.com", originalUrl);
+        }
+
 }
