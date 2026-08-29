@@ -4,6 +4,8 @@ import com.platform.urlshortener.dto.CreateUrlRequest;
 import com.platform.urlshortener.dto.CreateUrlResponse;
 import com.platform.urlshortener.service.UrlShortenerService;
 import jakarta.validation.Valid;
+import com.platform.urlshortener.dto.UrlAnalyticsResponse;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,24 +14,33 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/urls")
 public class UrlShortenerController {
 
-    private final UrlShortenerService urlShortenerService;
+        private final UrlShortenerService urlShortenerService;
 
-    public UrlShortenerController(
-            UrlShortenerService urlShortenerService
-    ) {
-        this.urlShortenerService = urlShortenerService;
-    }
+        public UrlShortenerController(
+                UrlShortenerService urlShortenerService
+        ) {
+                this.urlShortenerService = urlShortenerService;
+        }
 
-    @PostMapping
-    public ResponseEntity<CreateUrlResponse> createShortUrl(
-            @Valid @RequestBody CreateUrlRequest request
-    ) {
+        @PostMapping
+        public ResponseEntity<CreateUrlResponse> createShortUrl(
+                @Valid @RequestBody CreateUrlRequest request
+        ) {
 
-        CreateUrlResponse response =
-                urlShortenerService.createShortUrl(request.url());
+                CreateUrlResponse response =
+                        urlShortenerService.createShortUrl(request.url());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
-    }
+                return ResponseEntity
+                        .status(HttpStatus.CREATED)
+                        .body(response);
+        }
+
+        @GetMapping("/{shortCode}/analytics")
+        public ResponseEntity<UrlAnalyticsResponse> getAnalytics(
+                @PathVariable String shortCode
+        ) {
+        return ResponseEntity.ok(
+                urlShortenerService.getAnalytics(shortCode)
+        );
+        }    
 }

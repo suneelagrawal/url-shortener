@@ -38,8 +38,16 @@ public class ShortenedUrl {
     )
     private Instant createdAt;
 
+    @Column(
+            name = "click_count",
+            nullable = false
+    )
+    private long clickCount = 0;
+
+    @Column(name = "last_accessed_at")
+    private Instant lastAccessedAt;
+
     protected ShortenedUrl() {
-        // Required by JPA
     }
 
     public ShortenedUrl(
@@ -66,5 +74,18 @@ public class ShortenedUrl {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public long getClickCount() {
+        return clickCount;
+    }
+
+    public Instant getLastAccessedAt() {
+        return lastAccessedAt;
+    }
+
+    public void recordAccess() {
+        this.clickCount++;
+        this.lastAccessedAt = Instant.now();
     }
 }

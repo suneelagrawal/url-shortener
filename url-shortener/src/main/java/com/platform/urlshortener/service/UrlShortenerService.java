@@ -4,6 +4,9 @@ import com.platform.urlshortener.dto.CreateUrlResponse;
 import com.platform.urlshortener.entity.ShortenedUrl;
 import com.platform.urlshortener.repository.ShortenedUrlRepository;
 import com.platform.urlshortener.util.ShortCodeGenerator;
+
+import com.platform.urlshortener.dto.UrlAnalyticsResponse;
+
 import org.springframework.stereotype.Service;
 import com.platform.urlshortener.exception.ShortUrlNotFoundException;
 
@@ -62,9 +65,29 @@ public class UrlShortenerService {
         );
     }
     public String getOriginalUrl(String shortCode) {
-        return repository.findByShortCode(shortCode)
-                .map(ShortenedUrl::getOriginalUrl)
-                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode)
+
+        ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
+                .orElseThrow(() ->
+                        new ShortUrlNotFoundException(shortCode)
                 );
+
+        shortenedUrl.recordAccess();
+        repository.save(shortenedUrl);
+
+        return shortenedUrl.getOriginalUrl();
+    }
+    public UrlAnalyticsResponse getAnalytics(String shortCode) {
+
+        ShortenedUrl shortenedUrl = repository.findByShortCode(shortCode)
+                .orElseThrow(() ->
+                        new ShortUrlNotFoundException(shortCode)
+                );
+
+        return new UrlAnalyticsResponse(
+                shortenedUrl.getShortCode(),
+                shortenedUrl.getClickCount(),
+                shortenedUrl.getCreatedAt(),
+                shortenedUrl.getLastAccessedAt()
+        );
     }    
 }
